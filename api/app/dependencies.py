@@ -2,7 +2,10 @@ from fastapi import FastAPI,Request, HTTPException, Header, Depends
 import asyncio
 
 import os
+from dotenv import load_dotenv
 
+
+load_dotenv()
 API_KEY = os.getenv('API_KEY')
 
 # 创建一个依赖项，用于验证API密钥
