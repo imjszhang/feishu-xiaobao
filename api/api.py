@@ -5,13 +5,12 @@ import asyncio
 import threading
 
 from fastapi import FastAPI
-from api.app.dependencies import lifespan
 from mangum import Mangum
 
 class API:
     def __init__(self):
         nest_asyncio.apply()
-        self.app = FastAPI(lifespan=lifespan)
+        self.app = FastAPI()
         
         # CORS配置
         from fastapi.middleware.cors import CORSMiddleware
@@ -41,7 +40,7 @@ class API:
 # 创建实例
 api = API()
 app = api.app
-handler = Mangum(app)
+handler = Mangum(app, lifespan="off")
 
 # 导出类（如果需要）
 __all__ = ['API', 'app', 'handler']

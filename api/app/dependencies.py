@@ -25,13 +25,5 @@ stop_event = asyncio.Event()
 
 # 创建一个生命周期依赖项，用于在应用启动和关闭时执行代码
 async def lifespan(app: FastAPI):
-    # Startup code
-    print("Starting up...")
-    #from kaichi_api.app.utils.feishu_token import refresh_token  # 动态导入以避免循环依赖
-    #asyncio.create_task(refresh_token(stop_event))
+    # 简化生命周期管理
     yield
-    # Shutdown code
-    print("Shutting down...")
-    app.stop_event.set()
-    # 等待一些时间以确保后台任务已经停止
-    await asyncio.sleep(1)
