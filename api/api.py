@@ -40,7 +40,3 @@ class API:
 # 创建实例
 api = API()
 app = api.app
-
-
-# 导出类（如果需要）
-__all__ = ['api', 'app']
