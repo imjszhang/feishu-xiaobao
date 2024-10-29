@@ -35,3 +35,7 @@ class API:
 
         # 在新的线程中启动FastAPI应用，但不启动新的事件循环，而是使用现有的循环
         threading.Thread(target=lambda: asyncio.run(self.run_server()), daemon=True).start()
+
+# 暴露 FastAPI 实例，供 Vercel 使用
+api_instance = API()
+app = api_instance.app
