@@ -5,7 +5,7 @@ import asyncio
 import threading
 
 from fastapi import FastAPI
-from mangum import Mangum
+
 
 class API:
     def __init__(self):
@@ -40,7 +40,7 @@ class API:
 # 创建实例
 api = API()
 app = api.app
-handler = Mangum(app, lifespan="off")
+
 
 # 导出类（如果需要）
-__all__ = ['API', 'app', 'handler']
+__all__ = ['api', 'app']

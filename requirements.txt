@@ -2,5 +2,5 @@ requests
 beautifulsoup4
 uvicorn
 pydantic
-fastapi==0.95.2
-mangum==0.17.0
+fastapi
+nest_asyncio
