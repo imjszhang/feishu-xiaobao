@@ -4,3 +4,4 @@ fastapi
 uvicorn
 nest_asyncio
 pydantic
+mangum

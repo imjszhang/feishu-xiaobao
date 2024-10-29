@@ -6,7 +6,7 @@ import threading
 
 from fastapi import FastAPI, Request, HTTPException, Header, Depends
 from api.app.dependencies import lifespan
-
+from mangum import Mangum
 
 class API:
     def __init__(self):
@@ -39,3 +39,6 @@ class API:
 # 暴露 FastAPI 实例，供 Vercel 使用
 api_instance = API()
 app = api_instance.app
+
+# 添加 handler 用于 Vercel 部署
+handler = Mangum(app)
