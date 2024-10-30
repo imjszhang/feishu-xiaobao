@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, Depends, Body
 
 import json
-import os
 
 from ..dependencies import verify_api_key
 
@@ -275,7 +274,7 @@ def update_feishu_xiaobao_post(payload: dict = Body(...)):
     DOC_ID = payload.get("doc_id")
     TARGET_BLOCK_ID = payload.get("target_block_id")
     DATE_STR = payload.get("date_str")
-    CONTENT_DATA = payload.get("content_data")
+    CONTENT_DATA = json.loads(payload.get("content_data"))
 
     # 初始化
     content_manager = FeishuDocxContentManager(FEISHU_APP_ID, FEISHU_APP_SECRET)
