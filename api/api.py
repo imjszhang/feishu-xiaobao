@@ -25,9 +25,10 @@ class API:
         self._include_routers()
 
     def _include_routers(self):
-        from api.app.routes import test, scraper
+        from api.app.routes import test, scraper, feishu
         self.app.include_router(test.router)
         self.app.include_router(scraper.router)
+        self.app.include_router(feishu.router)
 
     def run_server(self, host="0.0.0.0", port=8000, log_level="info"):
         config = uvicorn.Config(self.app, host=host, port=port, log_level=log_level)
