@@ -37,6 +37,12 @@ class FeishuDocxContentManager:
         """
         self.docx_handler = FeishuDocxAPIHandler(app_id, app_secret)
     
+    async def initialize(self):
+        """
+        初始化 FeishuDocxAPIHandler
+        """
+        await self.docx_handler.initialize()
+    
     def _get_random_callout_style(self) -> tuple:
         """
         随机生成callout的样式
@@ -212,6 +218,9 @@ class FeishuDocxContentManager:
                         date_str: str, 
                         content_data: Union[Dict[str, any], List[Dict[str, any]]]) -> bool:
         try:
+            # 初始化 FeishuDocxAPIHandler
+            await self.initialize()
+
             # 获取父块信息
             parent_id, target_index = await self._get_parent_info(document_id, target_block_id)
             await asyncio.sleep(1)  # 添加等待
@@ -282,6 +291,6 @@ async def update_feishu_xiaobao_post(payload: dict = Body(...)):
     # 添加内容块
     result = await content_manager.add_content_blocks(DOC_ID, TARGET_BLOCK_ID, DATE_STR, CONTENT_DATA)
     if result:
-        return {"status": "success"}
+        return {"status": "success","result":result}
     else:
-        return {"status": "failed"}
+        return {"status": "failed","result":result}
