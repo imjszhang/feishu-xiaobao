@@ -1,25 +1,16 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "api/api.py",
-            "use": "@vercel/python",
-            "config": { "runtime": "python3.9" }
-        }
-    ],
-    "routes": [
-        {
-            "handle": "filesystem"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/api/api.py",
-            "headers": {
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept"
-            }
-        }
-    ]
+  "version": 2,
+  "builds": [
+      {
+          "src": "api/api.py",
+          "use": "@vercel/python",
+          "config": { "runtime": "python3.9" }
+      }
+  ],
+  "routes": [
+      {
+          "src": "/(.*)",
+          "dest": "api/api.py"
+      }
+  ]
 }
