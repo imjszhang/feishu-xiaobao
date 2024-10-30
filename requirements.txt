@@ -4,4 +4,5 @@ nest_asyncio
 fastapi>=0.68.0,<0.69.0
 pydantic>=1.8.0,<2.0.0
 uvicorn>=0.15.0,<0.16.0
-python-dotenv 
+python-dotenv
+aiohttp 

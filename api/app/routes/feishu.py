@@ -1,17 +1,22 @@
 from fastapi import APIRouter, HTTPException, Query, Depends, Body
+
 import json
+
 from ..dependencies import verify_api_key
+
 from typing import Dict, Optional, List, Union
 import random
 import asyncio
-from ..handlers.feishu_docx_api_handler import FeishuDocxAPIHandler, BlockFactory, BlockType
+from ..handlers.feishu_docx_api_handler_async import FeishuDocxAPIHandler, BlockFactory, BlockType
 
 
-class AsyncFeishuDocxContentManager:
-    """异步版本的飞书文档内容管理器"""
+class FeishuDocxContentManager:
+    """飞书文档内容管理器，用于管理文档中的内容块"""
     
-    AVAILABLE_COLORS = list(range(1, 14))
+    # 可用的背景颜色和边框颜色
+    AVAILABLE_COLORS = list(range(1, 14))  # 1-13的颜色值
     
+    # 可用的emoji列表
     AVAILABLE_EMOJIS = [
         "smile", "heart", "ok", "bulb", "star", "sun", "moon", "cloud",
         "rain", "zap", "trophy", "medal", "gift", "fire", "leaf", "music",
@@ -23,28 +28,47 @@ class AsyncFeishuDocxContentManager:
     ]
     
     def __init__(self, app_id: str, app_secret: str):
+        """
+        初始化飞书文档内容管理器
+        
+        Args:
+            app_id: 飞书应用的APP ID
+            app_secret: 飞书应用的APP Secret
+        """
         self.docx_handler = FeishuDocxAPIHandler(app_id, app_secret)
     
     def _get_random_callout_style(self) -> tuple:
+        """
+        随机生成callout的样式
+        
+        Returns:
+            tuple: (background_color, border_color, emoji_id)
+        """
         background_color = random.choice(self.AVAILABLE_COLORS)
         border_color = random.choice(self.AVAILABLE_COLORS)
         emoji_id = random.choice(self.AVAILABLE_EMOJIS)
         return background_color, border_color, emoji_id
     
     async def _get_parent_info(self, document_id: str, target_block_id: str) -> tuple:
-        """异步获取父块ID和目标块索引"""
+        """
+        获取父块ID和目标块索引
+        
+        Returns:
+            tuple: (parent_id, target_index)
+        """
         # 获取目标块的信息
-        target_block_info = await self.docx_handler.get_block_contents_async(document_id, target_block_id)
+        target_block_info = await self.docx_handler.get_block_contents(document_id, target_block_id)
         if not target_block_info or not target_block_info.get('data'):
             raise ValueError("获取目标块信息失败")
             
         parent_id = target_block_info['data']['block']['parent_id']
         
         # 获取父块的所有子块
-        parent_children = await self.docx_handler.get_block_children_async(document_id, parent_id)
+        parent_children = await self.docx_handler.get_block_children(document_id, parent_id)
         if not parent_children or not parent_children.get('data'):
             raise ValueError("获取父块子块信息失败")
             
+        # 找到目标块在父块中的位置
         target_index = next(
             (i for i, block in enumerate(parent_children['data'].get('items', []))
              if block.get('block_id') == target_block_id),
@@ -56,12 +80,26 @@ class AsyncFeishuDocxContentManager:
             
         return parent_id, target_index
     
+
+
+
     async def _add_single_callout(self, 
-                              document_id: str, 
-                              parent_id: str, 
-                              index: int, 
-                              content: Dict[str, any]) -> Optional[int]:
-        """异步添加单个callout块及其内容"""
+                        document_id: str, 
+                        parent_id: str, 
+                        index: int, 
+                        content: Dict[str, any]) -> Optional[int]:
+        """
+        添加单个callout块及其内容
+        
+        Args:
+            document_id: 文档ID
+            parent_id: 父块ID
+            index: 插入位置
+            content: callout内容数据
+            
+        Returns:
+            Optional[int]: 成功返回下一个插入位置的索引，失败返回None
+        """
         try:
             # 1. 创建空的callout块
             bg_color, border_color, emoji = self._get_random_callout_style()
@@ -72,17 +110,18 @@ class AsyncFeishuDocxContentManager:
                 emoji_id=emoji
             )
             
-            callout_response = await self.docx_handler.create_block_async(
+            callout_response = await self.docx_handler.create_block(
                 document_id=document_id,
                 block_id=parent_id,
                 children=[empty_callout],
                 index=index
             )
-            await asyncio.sleep(1)  # 异步等待
+            await asyncio.sleep(1)  # 添加等待
             
             if not callout_response or callout_response.get('code') != 0:
                 raise ValueError(f"创建callout块失败: {callout_response.get('msg')}")
             
+            # 获取新创建的callout块的ID
             callout_block_id = callout_response['data']['children'][0]['block_id']
             
             # 2. 准备并添加callout的子块
@@ -135,28 +174,28 @@ class AsyncFeishuDocxContentManager:
                 child_blocks.append(link_block)
             
             # 添加子块到callout中
-            child_response = await self.docx_handler.create_block_async(
+            child_response = await self.docx_handler.create_block(
                 document_id=document_id,
                 block_id=callout_block_id,
                 children=child_blocks
             )
-            await asyncio.sleep(1)
+            await asyncio.sleep(1)  # 添加等待
             
             if not child_response or child_response.get('code') != 0:
                 raise ValueError(f"创建子块失败: {child_response.get('msg')}")
             
             # 3. 删除callout中的第一个空白子块
-            callout_children = await self.docx_handler.get_block_children_async(document_id, callout_block_id)
-            await asyncio.sleep(1)
+            callout_children = await self.docx_handler.get_block_children(document_id, callout_block_id)
+            await asyncio.sleep(1)  # 添加等待
             
             if callout_children and callout_children.get('code') == 0:
-                delete_response = await self.docx_handler.delete_block_async(
+                delete_response = await self.docx_handler.delete_block(
                     document_id=document_id,
                     block_id=callout_block_id,
                     start_index=0,
                     end_index=1
                 )
-                await asyncio.sleep(1)
+                await asyncio.sleep(1)  # 添加等待
                 
                 if not delete_response or delete_response.get('code') != 0:
                     print(f"警告：删除第一个子块失败: {delete_response.get('msg')}")
@@ -168,15 +207,14 @@ class AsyncFeishuDocxContentManager:
             return None
 
     async def add_content_blocks(self, 
-                             document_id: str, 
-                             target_block_id: str, 
-                             date_str: str, 
-                             content_data: Union[Dict[str, any], List[Dict[str, any]]]) -> bool:
-        """异步添加内容块"""
+                        document_id: str, 
+                        target_block_id: str, 
+                        date_str: str, 
+                        content_data: Union[Dict[str, any], List[Dict[str, any]]]) -> bool:
         try:
             # 获取父块信息
             parent_id, target_index = await self._get_parent_info(document_id, target_block_id)
-            await asyncio.sleep(1)
+            await asyncio.sleep(1)  # 添加等待
             
             # 确保content_data是列表
             contents = content_data if isinstance(content_data, list) else [content_data]
@@ -209,13 +247,13 @@ class AsyncFeishuDocxContentManager:
                 }
             )
             
-            heading_response = await self.docx_handler.create_block_async(
+            heading_response = await self.docx_handler.create_block(
                 document_id=document_id,
                 block_id=parent_id,
                 children=[date_heading],
                 index=target_index+1
             )
-            await asyncio.sleep(1)
+            await asyncio.sleep(1)  # 添加等待
             
             if not heading_response or heading_response.get('code') != 0:
                 raise ValueError(f"创建日期标题失败: {heading_response.get('msg')}")
@@ -238,12 +276,11 @@ async def update_feishu_xiaobao_post(payload: dict = Body(...)):
     DATE_STR = payload.get("date_str")
     CONTENT_DATA = json.loads(payload.get("content_data"))
 
-    # 初始化异步内容管理器
-    content_manager = AsyncFeishuDocxContentManager(FEISHU_APP_ID, FEISHU_APP_SECRET)
+    # 初始化
+    content_manager = FeishuDocxContentManager(FEISHU_APP_ID, FEISHU_APP_SECRET)
 
-    # 异步添加内容块
+    # 添加内容块
     result = await content_manager.add_content_blocks(DOC_ID, TARGET_BLOCK_ID, DATE_STR, CONTENT_DATA)
-    
     if result:
         return {"status": "success"}
     else:
