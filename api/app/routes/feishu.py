@@ -122,7 +122,6 @@ class FeishuDocxContentManager:
                 children=[empty_callout],
                 index=index
             )
-            await asyncio.sleep(3)  # 添加等待
             
             if not callout_response or callout_response.get('code') != 0:
                 raise ValueError(f"创建callout块失败: {callout_response.get('msg')}")
@@ -185,14 +184,12 @@ class FeishuDocxContentManager:
                 block_id=callout_block_id,
                 children=child_blocks
             )
-            await asyncio.sleep(3)  # 添加等待
             
             if not child_response or child_response.get('code') != 0:
                 raise ValueError(f"创建子块失败: {child_response.get('msg')}")
             
             # 3. 删除callout中的第一个空白子块
             callout_children = await self.docx_handler.get_block_children(document_id, callout_block_id)
-            await asyncio.sleep(3)  # 添加等待
             
             if callout_children and callout_children.get('code') == 0:
                 delete_response = await self.docx_handler.delete_block(
@@ -201,7 +198,6 @@ class FeishuDocxContentManager:
                     start_index=0,
                     end_index=1
                 )
-                await asyncio.sleep(3)  # 添加等待
                 
                 if not delete_response or delete_response.get('code') != 0:
                     print(f"警告：删除第一个子块失败: {delete_response.get('msg')}")
@@ -223,7 +219,6 @@ class FeishuDocxContentManager:
 
             # 获取父块信息
             parent_id, target_index = await self._get_parent_info(document_id, target_block_id)
-            await asyncio.sleep(3)  # 添加等待
             
             # 确保content_data是列表
             contents = content_data if isinstance(content_data, list) else [content_data]
@@ -236,6 +231,7 @@ class FeishuDocxContentManager:
                     index=target_index+1,
                     content=content
                 )
+                await asyncio.sleep(1)  # 添加等待
             
             # 2. 最后添加日期标题
             date_heading = BlockFactory.create_block(
@@ -262,7 +258,6 @@ class FeishuDocxContentManager:
                 children=[date_heading],
                 index=target_index+1
             )
-            await asyncio.sleep(3)  # 添加等待
             
             if not heading_response or heading_response.get('code') != 0:
                 raise ValueError(f"创建日期标题失败: {heading_response.get('msg')}")
