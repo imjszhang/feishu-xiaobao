@@ -1,5 +1,5 @@
 # file name: feishu_bitable_api_handler.py
-from feishu_app_api import FeishuBitableAPI, get_tenant_access_token
+from api.app.utils.feishu_app_api import FeishuBitableAPI, get_tenant_access_token
 
 class FeishuBitableAPIHandler:
     def __init__(self, FEISHU_APP_ID, FEISHU_APP_SECRET):

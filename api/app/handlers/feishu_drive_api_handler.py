@@ -1,5 +1,5 @@
 #file name: feishu_drive_api_handler.py
-from feishu_app_api import FeishuDriveAPI, get_tenant_access_token
+from api.app.utils.feishu_app_api import FeishuDriveAPI, get_tenant_access_token
 
 class FeishuDriveAPIHandler:
     def __init__(self, FEISHU_APP_ID, FEISHU_APP_SECRET):

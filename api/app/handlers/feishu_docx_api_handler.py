@@ -1,5 +1,5 @@
 #file name: feishu_docx_api_handler.py
-from feishu_app_api import FeishuDocxAPI, get_tenant_access_token
+from api.app.utils.feishu_app_api import FeishuDocxAPI, get_tenant_access_token
 from enum import Enum
 
 class BlockType(Enum):
