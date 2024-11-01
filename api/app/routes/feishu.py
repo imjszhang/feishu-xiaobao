@@ -234,7 +234,7 @@ class FeishuDocxContentManager:
                     index=target_index+1,
                     content=content
                 )
-                await asyncio.sleep(1)  # 添加等待
+                await asyncio.sleep(0.4)  # 添加等待
             
             # 2. 最后添加日期标题
             date_heading = BlockFactory.create_block(
