@@ -165,7 +165,7 @@ class FeishuDocxContentManager:
         
             # 1. 添加所有callout块
             for i, content in enumerate(contents):
-                if i >= content_limit-1:
+                if i >= content_limit:
                     break
                 next_index = await self._add_single_callout(
                     document_id=document_id,
