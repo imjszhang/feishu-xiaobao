@@ -7,6 +7,7 @@ from typing import Dict, Optional, List, Union, Any
 import random
 import asyncio
 from ..handlers.feishu_docx_api_handler_async import FeishuDocxAPIHandler, BlockFactory, BlockType
+from ..utils.feishu_emoji import EMOJI_DICT
 
 class UpdateFeishuPayload(BaseModel):
     feishu_app_id: str
@@ -20,12 +21,10 @@ class FeishuDocxContentManager:
     """飞书文档内容管理器，用于管理文档中的内容块"""
     
     # 可用的背景颜色和边框颜色
-    AVAILABLE_COLORS = list(range(1, 14))  # 1-13的颜色值
+    AVAILABLE_COLORS = list(range(1, 7))  # 1-7的颜色值
     
     # 可用的emoji列表
-    AVAILABLE_EMOJIS = [
-        "bulb"
-    ]
+    AVAILABLE_EMOJIS = list(EMOJI_DICT.values())
     
     def __init__(self, app_id: str, app_secret: str):
         """
