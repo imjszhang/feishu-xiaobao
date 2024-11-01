@@ -126,65 +126,6 @@ class FeishuDocxContentManager:
             callout_block_id = callout_response['data']['children'][0]['block_id']
             
             # 2. 准备并添加callout的子块
-            """
-            child_blocks = []
-            # 添加标题
-            title_block = BlockFactory.create_block(
-                block_type=BlockType.HEADING2,
-                text_runs=[{
-                    "content": content.get("title", ""),
-                    "text_element_style": {
-                        "bold": True,
-                        "inline_code": False,
-                        "italic": False,
-                        "strikethrough": False,
-                        "underline": False
-                    }
-                }]
-            )
-            child_blocks.append(title_block)
-            
-            # 添加bullet points
-            for bullet in filter(None, content.get("bullets", [])):
-                bullet_block = BlockFactory.create_block(
-                    block_type=BlockType.BULLET,
-                    text_runs=[{
-                        "content": bullet,
-                        "text_element_style": {}
-                    }]
-                )
-                child_blocks.append(bullet_block)
-            
-            # 添加链接
-            if link := content.get("link"):
-                link_block = BlockFactory.create_block(
-                    block_type=BlockType.TEXT,
-                    text_runs=[
-                        {
-                            "content": "原文链接：",
-                            "text_element_style": {"bold": True}
-                        },
-                        {
-                            "content": "查看原文",
-                            "text_element_style": {
-                                "link": {"url": link}
-                            }
-                        }
-                    ]
-                )
-                child_blocks.append(link_block)
-            
-            # 添加子块到callout中
-            child_response = await self.docx_handler.create_block(
-                document_id=document_id,
-                block_id=callout_block_id,
-                children=child_blocks
-            )
-            """
-
-
-
-            # 在你的代码中使用
             children_ids, descendants = BlockFactory.create_content_blocks(content)
 
             # 然后可以将这些结果传给 create_descendant_blocks 方法
@@ -197,23 +138,7 @@ class FeishuDocxContentManager:
             
             if not child_response or child_response.get('code') != 0:
                 raise ValueError(f"创建子块失败: {child_response.get('msg')}")
-            
-            """
-            # 3. 删除callout中的第一个空白子块
-            callout_children = await self.docx_handler.get_block_children(document_id, callout_block_id)
-            
-            if callout_children and callout_children.get('code') == 0:
-                delete_response = await self.docx_handler.delete_block(
-                    document_id=document_id,
-                    block_id=callout_block_id,
-                    start_index=0,
-                    end_index=1
-                )
-                
-                if not delete_response or delete_response.get('code') != 0:
-                    print(f"警告：删除第一个子块失败: {delete_response.get('msg')}")
-            """
-            
+                       
             return index + 1
             
         except Exception as e:
@@ -234,9 +159,14 @@ class FeishuDocxContentManager:
             
             # 确保content_data是列表
             contents = content_data if isinstance(content_data, list) else [content_data]
+
+            #设置更新的content数量限制
+            content_limit = 3
         
             # 1. 添加所有callout块
-            for content in contents:
+            for i, content in enumerate(contents):
+                if i >= content_limit-1:
+                    break
                 next_index = await self._add_single_callout(
                     document_id=document_id,
                     parent_id=parent_id,
@@ -244,6 +174,7 @@ class FeishuDocxContentManager:
                     content=content
                 )
                 await asyncio.sleep(1)  # 添加等待
+                
             
             # 2. 最后添加日期标题
             date_heading = BlockFactory.create_block(
