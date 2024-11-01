@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Depends, Body
 
 import json
-
+import re
 from ..dependencies import verify_api_key
 
 from typing import Dict, Optional, List, Union
@@ -269,6 +269,35 @@ class FeishuDocxContentManager:
             return False
 
 
+def context_to_json(context):
+    # 使用正则表达式匹配 **标题** 和内容
+    pattern = r'\*\*(.*?)\*\*(.*?)(?=\*\*|$)'
+    matches = re.findall(pattern, context, re.DOTALL)
+    
+    # 构建JSON数组
+    result = []
+    for match in matches:
+        title = match[0].strip()
+        content = match[1].strip()
+        
+        # 提取每个段落的要点（以 - 开头的行），并过滤掉包含 "原文链接" 的行
+        bullets = [bullet for bullet in re.findall(r'- (.*?)(?=\n|$)', content) if not bullet.startswith("原文链接")]
+        
+        # 提取链接（以 "原文链接：" 开头的URL）
+        link_match = re.search(r'原文链接：(https?://[^\s]+)', content)
+        link = link_match.group(1) if link_match else None
+        
+        # 构建字典
+        result.append({
+            "title": title,
+            "bullets": bullets,
+            "link": link
+        })
+    
+    # 返回JSON格式的字符串
+    return json.dumps(result, ensure_ascii=False, indent=4)
+
+
 router = APIRouter()
 
 @router.post("/update_feishu_xiaobao", dependencies=[Depends(verify_api_key)])
@@ -278,7 +307,7 @@ async def update_feishu_xiaobao_post(payload: dict = Body(...)):
     DOC_ID = payload.get("doc_id")
     TARGET_BLOCK_ID = payload.get("target_block_id")
     DATE_STR = payload.get("date_str")
-    CONTENT_DATA = json.loads(payload.get("content_data"))
+    CONTENT_DATA = context_to_json(payload.get("content_data"))
 
     # 初始化
     content_manager = FeishuDocxContentManager(FEISHU_APP_ID, FEISHU_APP_SECRET)
