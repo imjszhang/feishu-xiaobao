@@ -1,14 +1,20 @@
-from fastapi import APIRouter, HTTPException, Query, Depends, Body
-
+from fastapi import APIRouter, HTTPException, Query, Depends, Body, BackgroundTasks
+from pydantic import BaseModel
 import json
 import re
 from ..dependencies import verify_api_key
-
-from typing import Dict, Optional, List, Union
+from typing import Dict, Optional, List, Union, Any
 import random
 import asyncio
 from ..handlers.feishu_docx_api_handler_async import FeishuDocxAPIHandler, BlockFactory, BlockType
 
+class UpdateFeishuPayload(BaseModel):
+    feishu_app_id: str
+    feishu_app_secret: str 
+    doc_id: str
+    target_block_id: str
+    date_str: str
+    content_data: str
 
 class FeishuDocxContentManager:
     """飞书文档内容管理器，用于管理文档中的内容块"""
@@ -86,14 +92,11 @@ class FeishuDocxContentManager:
             
         return parent_id, target_index
     
-
-
-
     async def _add_single_callout(self, 
                         document_id: str, 
                         parent_id: str, 
                         index: int, 
-                        content: Dict[str, any]) -> Optional[int]:
+                        content: Dict[str, Any]) -> Optional[int]:
         """
         添加单个callout块及其内容
         
@@ -212,7 +215,7 @@ class FeishuDocxContentManager:
                         document_id: str, 
                         target_block_id: str, 
                         date_str: str, 
-                        content_data: Union[Dict[str, any], List[Dict[str, any]]]) -> bool:
+                        content_data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> bool:
         try:
             # 初始化 FeishuDocxAPIHandler
             await self.initialize()
@@ -300,21 +303,33 @@ def context_to_json(context):
 
 router = APIRouter()
 
+async def background_task(
+    content_manager: FeishuDocxContentManager,
+    DOC_ID: str,
+    TARGET_BLOCK_ID: str,
+    DATE_STR: str,
+    CONTENT_DATA: List[Dict[str, Any]]
+):
+    await content_manager.add_content_blocks(DOC_ID, TARGET_BLOCK_ID, DATE_STR, CONTENT_DATA)
+
 @router.post("/update_feishu_xiaobao", dependencies=[Depends(verify_api_key)])
-async def update_feishu_xiaobao_post(payload: dict = Body(...)):
-    FEISHU_APP_ID = payload.get("feishu_app_id")
-    FEISHU_APP_SECRET = payload.get("feishu_app_secret")
-    DOC_ID = payload.get("doc_id")
-    TARGET_BLOCK_ID = payload.get("target_block_id")
-    DATE_STR = payload.get("date_str")
-    CONTENT_DATA = context_to_json(payload.get("content_data"))
-
+async def update_feishu_xiaobao_post(
+    payload: UpdateFeishuPayload,
+    background_tasks: BackgroundTasks
+):
+    CONTENT_DATA = context_to_json(payload.content_data)
+    
     # 初始化
-    content_manager = FeishuDocxContentManager(FEISHU_APP_ID, FEISHU_APP_SECRET)
-
-    # 添加内容块
-    result = await content_manager.add_content_blocks(DOC_ID, TARGET_BLOCK_ID, DATE_STR, CONTENT_DATA)
-    if result:
-        return {"status": "success","result":result}
-    else:
-        return {"status": "failed","result":result}
+    content_manager = FeishuDocxContentManager(payload.feishu_app_id, payload.feishu_app_secret)
+    
+    # 将任务添加到后台
+    background_tasks.add_task(
+        background_task, 
+        content_manager, 
+        payload.doc_id, 
+        payload.target_block_id, 
+        payload.date_str, 
+        CONTENT_DATA
+    )
+    
+    return {"status": "processing", "message": "任务已提交，正在后台处理"}
