@@ -191,6 +191,72 @@ class FeishuDocxAPI:
             async with session.post(url, headers=headers, data=json.dumps(payload)) as response:
                 return await response.json()
 
+    async def create_descendant_blocks(self, document_id, block_id, children_ids, descendants, index=0, document_revision_id=-1):
+        """
+        在文档中创建嵌套块结构
+
+        :param document_id: 文档的唯一标识符
+        :param block_id: 父块的ID
+        :param children_ids: 直接子块ID列表
+        :param descendants: 所有后代块的详细信息列表
+        :param index: 插入位置的索引，默认为0
+        :param document_revision_id: 文档版本ID，默认为-1（最新版本）
+        :return: API 响应结果
+
+        示例使用:
+        descendants = [
+            {
+                "block_id": "heading1",
+                "block_type": 3,
+                "heading1": {
+                    "elements": [{"text_run": {"content": "标题"}}]
+                },
+                "children": []
+            },
+            {
+                "block_id": "table1",
+                "block_type": 31,
+                "table": {
+                    "property": {
+                        "row_size": 1,
+                        "column_size": 2
+                    }
+                },
+                "children": ["cell1", "cell2"]
+            },
+            # ... 更多块定义
+        ]
+        
+        children_ids = ["heading1", "table1"]
+        
+        result = await api.create_descendant_blocks(
+            document_id="doc_id",
+            block_id="parent_block_id",
+            children_ids=children_ids,
+            descendants=descendants
+        )
+        """
+        url = f"{self.base_url}/docx/v1/documents/{document_id}/blocks/{block_id}/descendant"
+        headers = self._get_headers()
+        
+        # 构建请求体
+        payload = {
+            "index": index,
+            "children_id": children_ids,
+            "descendants": descendants
+        }
+        
+        # 添加文档版本ID参数
+        params = {
+            "document_revision_id": document_revision_id
+        }
+        
+        # 发送请求
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, params=params, json=payload) as response:
+                return await response.json()
+
+
     async def update_block(self, document_id, block_id, operation: list):
         url = f"{self.base_url}/docx/v1/documents/{document_id}/blocks/{block_id}"
         headers = self._get_headers()

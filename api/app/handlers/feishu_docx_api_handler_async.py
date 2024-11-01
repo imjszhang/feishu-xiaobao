@@ -1,6 +1,7 @@
 # file name: feishu_docx_api_handler_async.py
 from api.app.utils.feishu_app_api_async import FeishuDocxAPI, get_tenant_access_token
 from enum import Enum
+import time
 
 class BlockType(Enum):
     PAGE = (1, "page")
@@ -127,6 +128,7 @@ class BlockFactory:
             }
         }
 
+
     @staticmethod
     def create_quote_container_block(children: list):
         return {
@@ -166,6 +168,107 @@ class BlockFactory:
                 }
             }
         }
+    
+    @staticmethod
+    def create_content_blocks(content: dict) -> tuple[list, list]:
+        """
+        创建包含标题、要点和链接的内容块结构
+        
+        Args:
+            content (dict): 包含标题、要点和链接的内容字典
+                {
+                    "title": str,
+                    "bullets": list[str],
+                    "link": str
+                }
+                
+        Returns:
+            tuple[list, list]: 返回两个列表
+                - 第一个列表包含直接子块的ID
+                - 第二个列表包含所有块的详细信息
+        """
+        descendants = []  # 所有块的详细信息
+        children_ids = []  # 直接子块的ID列表
+        current_id = 1
+        
+        def get_next_id(prefix="block"):
+            nonlocal current_id
+            block_id = f"{prefix}_{current_id}"
+            current_id += 1
+            return block_id
+            
+        # 1. 创建标题块
+        title_id = get_next_id("title")
+        title_block = {
+            "block_id": title_id,
+            "block_type": BlockType.HEADING2.position,  # HEADING2
+            "heading2": {
+                "elements": [{
+                    "text_run": {
+                        "content": content.get("title", ""),
+                        "text_element_style": {
+                            "bold": True,
+                            "inline_code": False,
+                            "italic": False,
+                            "strikethrough": False,
+                            "underline": False
+                        }
+                    }
+                }]
+            }
+        }
+        descendants.append(title_block)
+        children_ids.append(title_id)
+        
+        # 2. 创建要点块
+        for bullet in filter(None, content.get("bullets", [])):
+            bullet_id = get_next_id("bullet")
+            bullet_block = {
+                "block_id": bullet_id,
+                "block_type": BlockType.BULLET.position,  # BULLET
+                "bullet": {
+                    "elements": [{
+                        "text_run": {
+                            "content": bullet,
+                            "text_element_style": {}
+                        }
+                    }]
+                }
+            }
+            descendants.append(bullet_block)
+            children_ids.append(bullet_id)
+        
+        # 3. 创建链接块
+        if link := content.get("link"):
+            link_id = get_next_id("link")
+            link_block = {
+                "block_id": link_id,
+                "block_type": BlockType.TEXT.position,  # TEXT
+                "text": {
+                    "elements": [
+                        {
+                            "text_run": {
+                                "content": "原文链接：",
+                                "text_element_style": {
+                                    "bold": True
+                                }
+                            }
+                        },
+                        {
+                            "text_run": {
+                                "content": "查看原文",
+                                "text_element_style": {
+                                    "link": {"url": link}
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+            descendants.append(link_block)
+            children_ids.append(link_id)
+            
+        return children_ids, descendants
 
 class BlockBatchUpdateRequestBuilder:
     def __init__(self):
@@ -427,6 +530,25 @@ class FeishuDocxAPIHandler:
         else:
             print(f"块创建失败: {response.get('msg')}")
         return response
+
+    async def create_descendant_blocks(self, document_id, block_id, children_ids, descendants, index=0, document_revision_id=-1):
+        """
+        在文档中创建嵌套的块结构
+        """
+        response = await self.feishu_docx_api.create_descendant_blocks(
+            document_id, 
+            block_id, 
+            children_ids, 
+            descendants, 
+            index, 
+            document_revision_id
+        )
+        if response.get('code') == 0:
+            print("嵌套块创建成功")
+        else:
+            print(f"嵌套块创建失败: {response.get('msg')}")
+        return response
+
 
     async def update_block(self, document_id, block_id, operation: list):
         """

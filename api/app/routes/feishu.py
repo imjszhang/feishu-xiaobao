@@ -24,13 +24,7 @@ class FeishuDocxContentManager:
     
     # 可用的emoji列表
     AVAILABLE_EMOJIS = [
-        "smile", "heart", "ok", "bulb", "star", "sun", "moon", "cloud",
-        "rain", "zap", "trophy", "medal", "gift", "fire", "leaf", "music",
-        "bell", "thumbsup", "coffee", "game", "flag", "book", "gear",
-        "clock", "rocket", "target", "calendar", "pin", "paperclip",
-        "scissors", "pencil", "folder", "inbox", "camera", "video",
-        "microphone", "headphones", "art", "chart", "graph", "link",
-        "lock", "key", "hammer", "wrench", "package", "truck"
+        "bulb"
     ]
     
     def __init__(self, app_id: str, app_secret: str):
@@ -133,8 +127,8 @@ class FeishuDocxContentManager:
             callout_block_id = callout_response['data']['children'][0]['block_id']
             
             # 2. 准备并添加callout的子块
+            """
             child_blocks = []
-            
             # 添加标题
             title_block = BlockFactory.create_block(
                 block_type=BlockType.HEADING2,
@@ -187,10 +181,25 @@ class FeishuDocxContentManager:
                 block_id=callout_block_id,
                 children=child_blocks
             )
+            """
+
+
+
+            # 在你的代码中使用
+            children_ids, descendants = BlockFactory.create_content_blocks(content)
+
+            # 然后可以将这些结果传给 create_descendant_blocks 方法
+            child_response = await self.docx_handler.create_descendant_blocks(
+                document_id=document_id,
+                block_id=callout_block_id,
+                children_ids=children_ids,
+                descendants=descendants
+            )
             
             if not child_response or child_response.get('code') != 0:
                 raise ValueError(f"创建子块失败: {child_response.get('msg')}")
             
+            """
             # 3. 删除callout中的第一个空白子块
             callout_children = await self.docx_handler.get_block_children(document_id, callout_block_id)
             
@@ -204,6 +213,7 @@ class FeishuDocxContentManager:
                 
                 if not delete_response or delete_response.get('code') != 0:
                     print(f"警告：删除第一个子块失败: {delete_response.get('msg')}")
+            """
             
             return index + 1
             
@@ -234,7 +244,7 @@ class FeishuDocxContentManager:
                     index=target_index+1,
                     content=content
                 )
-                await asyncio.sleep(0.4)  # 添加等待
+                await asyncio.sleep(1)  # 添加等待
             
             # 2. 最后添加日期标题
             date_heading = BlockFactory.create_block(

@@ -178,6 +178,37 @@ class FeishuDocxAPI:
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         return response.json()
 
+    def create_descendant_blocks(self, document_id, block_id, children_ids, descendants, index=0, document_revision_id=-1):
+        """
+        在文档中创建嵌套块结构
+
+        :param document_id: 文档 ID
+        :param block_id: 父块 ID
+        :param children_id: 子块 ID 列表
+        :param descendants: 所有后代块的详细信息列表
+        :param index: 插入位置的索引，默认为0
+        :param document_revision_id: 文档版本号，默认为-1（最新版本）
+        :return: API 响应结果
+        """
+        url = f"{self.base_url}/docx/v1/documents/{document_id}/blocks/{block_id}/descendant"
+        headers = self._get_headers()
+        
+        # 构建请求体
+        payload = {
+            "index": index,
+            "children_id": children_ids,
+            "descendants": descendants
+        }
+        
+        # 添加可选的文档版本号参数
+        params = {}
+        if document_revision_id is not None:
+            params["document_revision_id"] = document_revision_id
+        
+        # 发送 POST 请求
+        response = requests.post(url, headers=headers, params=params, data=json.dumps(payload))
+        return response.json()
+
     def update_block(self, document_id, block_id, operation: list):
         url = f"{self.base_url}/docx/v1/documents/{document_id}/blocks/{block_id}"
         headers = self._get_headers()
