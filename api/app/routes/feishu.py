@@ -280,7 +280,7 @@ class FindBlockPayload(BaseModel):
     feishu_app_secret: str
     doc_id: str
     target_content: str = "每日推荐"
-    target_block_type: int = 3  # 默认为h2块类型
+    target_block_type: int = 3  # 默认为h1块类型
 
 def find_block_by_content_and_type(data: List[Dict], target_content: str, target_block_type: int, block_map: Dict) -> Optional[str]:
     """
@@ -299,8 +299,8 @@ def find_block_by_content_and_type(data: List[Dict], target_content: str, target
         for item in data:
             if isinstance(item, dict):
                 if item.get('block_type') == target_block_type:
-                    if 'heading2' in item:  # 对于heading2类型
-                        elements = item['heading2'].get('elements', [])
+                    if 'heading1' in item:  # 对于heading1类型
+                        elements = item['heading1'].get('elements', [])
                         for element in elements:
                             if 'text_run' in element and target_content in element['text_run'].get('content', ''):
                                 return item.get('block_id')
