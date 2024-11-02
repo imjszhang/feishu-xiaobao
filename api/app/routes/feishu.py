@@ -273,3 +273,92 @@ async def update_feishu_xiaobao_post(
     )
     
     return {"status": "processing", "message": "任务已提交，正在后台处理"}
+
+
+class FindBlockPayload(BaseModel):
+    feishu_app_id: str
+    feishu_app_secret: str
+    doc_id: str
+    target_content: str = "每日推荐"
+    target_block_type: int = 3  # 默认为h2块类型
+
+def find_block_by_content_and_type(data: List[Dict], target_content: str, target_block_type: int, block_map: Dict) -> Optional[str]:
+    """
+    递归查找包含特定文字内容和block_type的块，并返回该块的ID
+    
+    Args:
+        data: JSON数据（字典或列表）
+        target_content: 要查找的文字内容
+        target_block_type: 要查找的block_type
+        block_map: 用于查找block_id对应的块的字典
+        
+    Returns:
+        Optional[str]: 符合条件的块ID，若未找到则返回None
+    """
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict):
+                if item.get('block_type') == target_block_type:
+                    if 'heading2' in item:  # 对于heading2类型
+                        elements = item['heading2'].get('elements', [])
+                        for element in elements:
+                            if 'text_run' in element and target_content in element['text_run'].get('content', ''):
+                                return item.get('block_id')
+                    elif 'text' in item:  # 对于普通文本类型
+                        elements = item['text'].get('elements', [])
+                        for element in elements:
+                            if 'text_run' in element and target_content in element['text_run'].get('content', ''):
+                                return item.get('block_id')
+
+                if 'children' in item:
+                    children_blocks = [block_map.get(child_id) for child_id in item['children']]
+                    children_blocks = [block for block in children_blocks if block is not None]
+                    result = find_block_by_content_and_type(children_blocks, target_content, target_block_type, block_map)
+                    if result:
+                        return result
+    return None
+
+def build_block_map(blocks: List[Dict]) -> Dict:
+    """构建block_id到block的映射字典"""
+    return {block['block_id']: block for block in blocks 
+            if isinstance(block, dict) and 'block_id' in block}
+
+@router.post("/find_block", dependencies=[Depends(verify_api_key)])
+async def find_block_post(payload: FindBlockPayload):
+    try:
+        # 初始化 handler
+        docx_handler = FeishuDocxAPIHandler(payload.feishu_app_id, payload.feishu_app_secret)
+        await docx_handler.initialize()
+        
+        # 获取文档块
+        document_blocks = await docx_handler.get_document_blocks(payload.doc_id)
+        if not document_blocks or 'data' not in document_blocks:
+            raise HTTPException(status_code=400, detail="Failed to get document blocks")
+            
+        blocks = document_blocks.get('data', {}).get('items', [])
+        
+        # 构建block_map
+        block_map = build_block_map(blocks)
+        
+        # 查找特定内容和类型的块
+        block_id = find_block_by_content_and_type(
+            blocks, 
+            payload.target_content, 
+            payload.target_block_type, 
+            block_map
+        )
+        
+        if block_id:
+            return {
+                "status": "success",
+                "block_id": block_id,
+                "block_content": block_map.get(block_id)
+            }
+        else:
+            return {
+                "status": "not_found",
+                "message": "No matching block found"
+            }
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
